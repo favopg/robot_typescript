@@ -4,6 +4,47 @@ import * as tf from '@tensorflow/tfjs';
 import { buildPolicyValueModel } from './model/policy_value';
 import { buildDatasetFromSgfTexts, listSgfFilesInDir } from './data/dataset';
 
+// Fallback saver: save model artifacts without relying on tfjs-node's file:// handler
+async function saveModelWithoutTfjsNode(model: tf.LayersModel, outDir: string): Promise<string> {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const saveDir = path.resolve(outDir, `pv-${stamp}`);
+  await fs.promises.mkdir(saveDir, { recursive: true });
+
+  const handler = tf.io.withSaveHandler(async (artifacts) => {
+    const modelTopology = artifacts.modelTopology as tf.io.ModelJSON;
+    const weightData = artifacts.weightData as ArrayBuffer | undefined;
+    const weightSpecs = artifacts.weightSpecs ?? [];
+
+    // Build a weights manifest for our single binary file
+    const manifest = [
+      {
+        paths: ['weights.bin'],
+        weights: weightSpecs,
+      },
+    ];
+
+    // Compose model.json content
+    const modelJson = {
+      modelTopology,
+      weightsManifest: manifest,
+    } as any;
+
+    // Write files
+    await fs.promises.writeFile(path.join(saveDir, 'model.json'), JSON.stringify(modelJson, null, 2), 'utf8');
+    if (weightData && weightSpecs.length > 0) {
+      await fs.promises.writeFile(path.join(saveDir, 'weights.bin'), Buffer.from(weightData));
+    }
+
+    const info: tf.io.SaveResult = {
+      modelArtifactsInfo: { dateSaved: new Date(), modelTopologyType: 'JSON' },
+    } as tf.io.SaveResult;
+    return info;
+  });
+
+  await model.save(handler);
+  return saveDir;
+}
+
 async function tryEnableNativeBackend() {
   try {
     // Use require to avoid TypeScript module resolution error when the optional
@@ -100,7 +141,13 @@ async function main() {
     await model.save(savePath);
     console.log(`[save] Model saved to ${savePath}`);
   } catch (e) {
-    console.log('[save] Skipped saving model (likely tfjs-node not available). Reason:', (e as Error)?.message ?? e);
+    // Fallback: save without tfjs-node using a custom handler
+    try {
+      const savedDir = await saveModelWithoutTfjsNode(model, outDir);
+      console.log(`[save] Model saved (custom) to ${savedDir}`);
+    } catch (e2) {
+      console.log('[save] Failed to save model even with custom handler. Reason:', (e2 as Error)?.message ?? e2);
+    }
   }
 
   X.dispose();
