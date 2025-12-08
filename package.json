@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "setup:nvm": "powershell -ExecutionPolicy Bypass -File scripts\\install-nvm-windows.ps1",
     "setup:node20": "powershell -Command \"nvm install 20.17.0; nvm use 20.17.0; node -v\"",
-    "train:sgf": "ts-node src/train_sgf.ts"
+    "train:sgf": "ts-node src/train_sgf.ts",
+    "play:ai": "ts-node scripts/play_vs_ai.ts"
   },
   "engines": {
     "node": ">=18"
