@@ -22,6 +22,8 @@ async function tryEnableNativeBackend() {
 
 async function main() {
   await tryEnableNativeBackend();
+  // Ensure backend is initialized even when tfjs-node is not available
+  await tf.ready();
   // Verify backend
   const backend = tf.getBackend();
   console.log(`[tf] backend: ${backend}`);

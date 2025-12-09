@@ -16,7 +16,7 @@
     "play:ai": "ts-node scripts/play_vs_ai.ts"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18 <23"
   },
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0"

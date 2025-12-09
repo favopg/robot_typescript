@@ -96,6 +96,8 @@ function resolveInputPath(argPath?: string): string {
 
 async function main() {
   await tryEnableNativeBackend();
+  // Ensure TF backend is initialized before querying name
+  await tf.ready();
   console.log(`[tf] backend: ${tf.getBackend()}`);
 
   const args = process.argv.slice(2);
